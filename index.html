@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EFL Phonics Code Breaker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --secondary: #f39c12;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+        }
+
+        * { font-family: 'Balsamiq Sans', cursive; }
+
+        body {
+            background-image: url('gamepage.jpg');
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 900px;
+            border: 5px solid var(--primary);
+        }
+
+        h1 { color: var(--dark); margin: 0 0 10px 0; font-size: 2.8rem; }
+        p { color: #444; margin-bottom: 25px; font-size: 1.3rem; }
+
+        .vocab-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .word-box {
+            background: white;
+            border: 3px solid var(--primary);
+            border-radius: 15px;
+            padding: 10px;
+            box-shadow: 0 4px 0px var(--primary);
+        }
+
+        .word-number { display: block; font-size: 1.1rem; color: var(--secondary); font-weight: 700; }
+        .word-text { display: block; font-size: 1.4rem; color: var(--dark); font-weight: 700; }
+
+        .controls { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+        button {
+            padding: 15px 25px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.1s;
+            color: white;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+        }
+
+        button:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; box-shadow: none; }
+
+        .btn-play { background-color: var(--primary); }
+        .btn-reveal { background-color: var(--secondary); }
+        .btn-next { background-color: var(--success); }
+        .btn-quit { background-color: var(--danger); }
+
+        #code-display {
+            margin-top: 25px;
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--dark);
+            background: #fff;
+            border-radius: 20px;
+            border: 4px dashed var(--primary);
+            padding: 10px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 10px;
+        }
+
+        .hidden { visibility: hidden; }
+
+        @media (max-width: 800px) {
+            .vocab-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>🔐 Phonics Code Breaker</h1>
+        <p>Listen carefully for /ch/ and /sh/!</p>
+
+        <div class="vocab-grid" id="vocabGrid"></div>
+
+        <div class="controls">
+            <button id="btnPlay" class="btn-play" onclick="playSequence()">🔊 Listen</button>
+            <button id="btnReveal" class="btn-reveal" onclick="revealCode()">Reveal Code</button>
+            <button class="btn-next" onclick="resetGame()">Next Round</button>
+            <button class="btn-quit" onclick="quitGame()">Quit</button>
+        </div>
+
+        <div id="code-display" class="hidden"></div>
+    </div>
+
+    <script>
+        // Updated Vocabulary Categories
+        const chWords = ["chicken", "church", "lunch", "chair", "catch"];
+        const shWords = ["shop", "short", "fish", "sheep", "wish"];
+        
+        const fullVocabulary = [...chWords, ...shWords];
+        
+        let currentSequence = [];
+        let isPlaying = false;
+
+        // Draw the Grid
+        const vocabGrid = document.getElementById('vocabGrid');
+        fullVocabulary.forEach((word, index) => {
+            const div = document.createElement('div');
+            div.className = 'word-box';
+            div.innerHTML = `<span class="word-number">${index + 1}</span><span class="word-text">${word}</span>`;
+            vocabGrid.appendChild(div);
+        });
+
+        function generateOddOneOutSequence() {
+            currentSequence = [];
+            
+            // 50/50 chance for which sound is the majority
+            const isChMajority = Math.random() < 0.5;
+            
+            const majorityPool = isChMajority ? [...chWords] : [...shWords];
+            const minorityPool = isChMajority ? [...shWords] : [...chWords];
+            
+            // Pick 2 different words from majority
+            const m1 = majorityPool.splice(Math.floor(Math.random() * majorityPool.length), 1)[0];
+            const m2 = majorityPool.splice(Math.floor(Math.random() * majorityPool.length), 1)[0];
+            
+            // Pick 1 from minority (the odd one out)
+            const oddPick = minorityPool[Math.floor(Math.random() * minorityPool.length)];
+            
+            const rawSequence = [m1, m2, oddPick];
+            // Shuffle the sequence so the odd one isn't always in the same spot
+            const shuffled = rawSequence.sort(() => Math.random() - 0.5);
+            
+            currentSequence = shuffled.map(word => {
+                return {
+                    name: word,
+                    code: fullVocabulary.indexOf(word) + 1,
+                    audio: new Audio(`${word}.mp3`)
+                };
+            });
+        }
+
+        async function playSequence() {
+            if (isPlaying) return;
+            isPlaying = true;
+            document.getElementById('btnPlay').disabled = true;
+            document.getElementById('code-display').classList.add('hidden');
+
+            for (let i = 0; i < currentSequence.length; i++) {
+                await new Promise(resolve => {
+                    const audio = currentSequence[i].audio;
+                    audio.onended = () => setTimeout(resolve, 800);
+                    audio.onerror = () => { console.error("Audio missing: " + audio.src); resolve(); };
+                    audio.play();
+                });
+            }
+
+            isPlaying = false;
+            document.getElementById('btnPlay').disabled = false;
+        }
+
+        function revealCode() {
+            const display = document.getElementById('code-display');
+            display.innerText = currentSequence.map(item => item.code).join('-');
+            display.classList.remove('hidden');
+        }
+
+        function resetGame() {
+            document.getElementById('code-display').classList.add('hidden');
+            generateOddOneOutSequence();
+            playSequence();
+        }
+
+        function quitGame() {
+            if (confirm("Do you want to quit?")) {
+                document.body.innerHTML = `
+                    <div style="text-align:center; margin-top: 100px; background:white; padding: 50px; border-radius: 30px; border: 5px solid var(--primary);">
+                        <h1 style="font-size: 4rem;">Well Done!</h1>
+                        <button class="btn-play" style="padding: 20px 40px; font-size: 2rem;" onclick="location.reload()">Play Again</button>
+                    </div>`;
+            }
+        }
+
+        window.onload = generateOddOneOutSequence;
+    </script>
+</body>
+</html>
